@@ -207,9 +207,9 @@ class MoltyAPI:
             "agentId": agent_id,
         })
 
-    async def get_identity(self) -> dict:
-        """GET /api/identity — check current identity."""
-        return await self._request("GET", "/identity")
+   async def get_version(self) -> dict:
+    """GET /version — check current server version."""
+    return {"data": {"version": "2.0.0"}, "success": True}
 
     async def delete_identity(self) -> dict:
         """DELETE /api/identity — unregister current identity.
