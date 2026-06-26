@@ -318,7 +318,7 @@ async def ensure_account_ready() -> dict:
     """
     Ensure account exists. Run first-run intake if needed.
     Returns credentials dict with api_key.
-    """
+  
     if is_first_run():
         return await run_first_run_intake()
 
