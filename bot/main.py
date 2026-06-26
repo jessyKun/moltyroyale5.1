@@ -1,5 +1,5 @@
 """
-Molty Royale AI Agent — Entry Point v2.0.
+Molty Royale AI Agent — Entry Point v1.11.0
 Run: python -m bot.main
 Dashboard + Bot run concurrently.
 """
@@ -18,7 +18,7 @@ DASHBOARD_PORT = int(os.getenv("PORT", os.getenv("DASHBOARD_PORT", "8080")))
 
 def main():
     """Entry point for the bot."""
-    log.info("Molty Royale AI Agent v2.0.0")
+    log.info("Molty Royale AI Agent v1.11.0")
     log.info("Press Ctrl+C to stop")
 
     heartbeat = Heartbeat()
