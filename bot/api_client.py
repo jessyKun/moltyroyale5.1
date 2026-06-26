@@ -207,8 +207,11 @@ class MoltyAPI:
             "agentId": agent_id,
         })
 
-   async def get_version(self) -> dict:
+   # ── Version ───────────────────────────────────────────────────────
+
+async def get_version(self) -> dict:
     """GET /version — check current server version."""
+    # === SOLUSI ALTERNATIF: Langsung return versi tanpa request ===
     return {"data": {"version": "2.0.0"}, "success": True}
 
     async def delete_identity(self) -> dict:
