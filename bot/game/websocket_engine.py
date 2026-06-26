@@ -1,105 +1,42 @@
-"""
-WebSocket gameplay engine — wss://cdn.moltyroyale.com/ws/agent.
-Core loop: connect → process messages → decide → act → repeat.
+# Patch for bot/game/websocket_engine.py
 
-Per game-loop.md:
-- agent_view uses 'view' key (NOT 'data')
-- turn_advanced includes full 'view' snapshot — MUST be processed
-- action envelope: { type: "action", data: { type: "ACTION_TYPE", ... }, thought: {...} }
-- action_result: includes canAct + cooldownRemainingMs at TOP LEVEL
-- can_act_changed: canAct at TOP LEVEL (not nested in data)
-- Only one WS session per API key
-"""
-import json
-import asyncio
-import websockets
+Update the import and connection section so the WebSocket URL uses `wss://` and headers work across websockets versions.
+
+## 1. Keep this import
+
+```python
 from bot.config import WS_URL, SKILL_VERSION
-from bot.credentials import get_api_key
-from bot.game.action_sender import ActionSender, COOLDOWN_ACTIONS, FREE_ACTIONS
-from bot.strategy.brain import decide_action, reset_game_state, learn_from_map
-from bot.dashboard.state import dashboard_state
-from bot.utils.rate_limiter import ws_limiter
-from bot.utils.logger import get_logger
+```
 
-log = get_logger(__name__)
+## 2. Replace your `websockets.connect(...)` call with this helper pattern
 
+```python
+headers = {
+    "X-API-Key": get_api_key(),
+    "X-Version": SKILL_VERSION,
+}
 
-def _update_dz_knowledge(view: dict):
-    """Continuously track death zones from every agent_view.
-    Updates brain._map_knowledge with any new DZ regions observed.
-    v1.5.2: pendingDeathzones entries are {id, name} objects.
-    """
-    from bot.strategy.brain import _map_knowledge
-    # Track DZ from visible regions
-    for region in view.get("visibleRegions", []):
-        if isinstance(region, dict) and region.get("isDeathZone"):
-            rid = region.get("id", "")
-            if rid:
-                _map_knowledge["death_zones"].add(rid)
-    # Track from connected regions (type-safe: may be string IDs or objects)
-    for conn in view.get("connectedRegions", []):
-        if isinstance(conn, dict) and conn.get("isDeathZone"):
-            rid = conn.get("id", "")
-            if rid:
-                _map_knowledge["death_zones"].add(rid)
-        # Bare string IDs — we don't know if it's DZ, skip
-    # Track current region
-    cur = view.get("currentRegion", {})
-    if isinstance(cur, dict) and cur.get("isDeathZone"):
-        rid = cur.get("id", "")
-        if rid:
-            _map_knowledge["death_zones"].add(rid)
-    # Track pending DZ — v1.5.2: entries are {id, name} objects
-    for dz in view.get("pendingDeathzones", []):
-        if isinstance(dz, dict):
-            rid = dz.get("id", "")
-            if rid:
-                _map_knowledge["death_zones"].add(rid)
-        elif isinstance(dz, str):
-            _map_knowledge["death_zones"].add(dz)  # Legacy fallback
+if not WS_URL.startswith(("ws://", "wss://")):
+    raise RuntimeError(f"Invalid WS_URL: {WS_URL}. It must start with ws:// or wss://")
 
+try:
+    self.ws = await websockets.connect(
+        WS_URL,
+        additional_headers=headers,
+        ping_interval=20,
+        ping_timeout=20,
+    )
+except TypeError:
+    # Compatibility fallback for older websockets releases.
+    self.ws = await websockets.connect(
+        WS_URL,
+        extra_headers=headers,
+        ping_interval=20,
+        ping_timeout=20,
+    )
+```
 
-class WebSocketEngine:
-    """Manages the gameplay WebSocket session."""
-
-    def __init__(self, game_id: str, agent_id: str):
-        self.game_id = game_id
-        self.agent_id = agent_id
-        self.action_sender = ActionSender()
-        self.ws = None
-        self.game_result = None
-        self.last_view = None
-        self._ping_task = None
-        self._running = False
-        self._map_just_used = False  # Track if Map was used for learning
-        # Dashboard key/name — set by heartbeat before .run()
-        self.dashboard_key = agent_id  # fallback to agent_id
-        self.dashboard_name = "Agent"
-
-    async def run(self) -> dict:
-        """
-        Main gameplay loop. Returns game result dict.
-        Per gotchas.md: connect with X-API-Key only, no gameId/agentId params.
-        """
-        api_key = get_api_key()
-        headers = {
-            "X-API-Key": api_key,
-            "X-Version": SKILL_VERSION,
-        }
-
-        self._running = True
-        retry_count = 0
-        max_retries = 5
-
-        while self._running and retry_count < max_retries:
-            try:
-                log.info("Connecting WebSocket to %s...", WS_URL)
-                async with websockets.connect(
-                    WS_URL,
-                    additional_headers=headers,
-                    ping_interval=None,  # We handle our own pings
-                    max_size=2**20,  # 1MB max message
-                ) as ws:
+Do not append `gameId` or `agentId` to `WS_URL`; keep those in message payloads / server state, not URL query params.
                     self.ws = ws
                     retry_count = 0  # Reset on successful connect
                     log.info("✅ WebSocket connected for game=%s", self.game_id)
