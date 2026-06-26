@@ -12,8 +12,8 @@ load_dotenv()
 SKILL_VERSION = "1.5.2"
 
 # ── URLs ──────────────────────────────────────────────────────────────
-API_BASE = "https://cdn.moltyroyale.com/api"
-WS_URL = "wss://cdn.moltyroyale.com/ws/agent"
+API_BASE = "https://cdn.clawroyale.com/api"
+WS_URL = "wss://cdn.clawroyale.com/ws/agent"
 
 # ── Chain config (CROSS Mainnet) ──────────────────────────────────────
 CROSS_CHAIN_ID = 612055
