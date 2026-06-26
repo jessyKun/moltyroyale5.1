@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Skill / API version
-SKILL_VERSION = os.getenv("SKILL_VERSION", "1.5.2").strip()
+SKILL_VERSION = os.getenv("SKILL_VERSION", "2.0.0").strip()
 
 # URLs
 API_BASE = os.getenv("API_BASE", "https://cdn.clawroyale.ai/api").rstrip("/")
